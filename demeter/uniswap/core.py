@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from ._typing import UniV3Pool, Position, UniV3PoolStatus, PositionInfo
 from .helper import quote_price_to_tick, from_wei
-from .liquitidy_math import get_amounts, get_liquidity
+from .liquitidy_math import get_amounts, get_liquidity_0, get_amounts_0
 
 
 class V3CoreLib(object):
@@ -20,14 +20,14 @@ class V3CoreLib(object):
         :param sqrt_price_x96: sqrt(price) * 2^96
         :return: token0 position, token1 position, liquid, position instance
         """
-        position_liq = get_liquidity(sqrt_price_x96, lower_tick, upper_tick,
+        liquidity0, liquidity1 = get_liquidity_0(sqrt_price_x96, lower_tick, upper_tick,
                                      token0_amount, token1_amount,
                                      pool.token0.decimal, pool.token1.decimal)
-        token0_in_position, token1_in_position = get_amounts(sqrt_price_x96, lower_tick, upper_tick,
-                                                             position_liq, pool.token0.decimal, pool.token1.decimal)
+        token0_in_position, token1_in_position = get_amounts_0(sqrt_price_x96, lower_tick, upper_tick,
+                                                             liquidity0, liquidity1, pool.token0.decimal, pool.token1.decimal)
         new_position_entity = PositionInfo(lower_tick=lower_tick,
                                            upper_tick=upper_tick)
-        return token0_in_position, token1_in_position, int(position_liq), new_position_entity
+        return token0_in_position, token1_in_position, int(liquidity0 + liquidity1), new_position_entity
 
     @staticmethod
     def close_position(pool: UniV3Pool, position_info: PositionInfo, liquidity, sqrt_price_x96):

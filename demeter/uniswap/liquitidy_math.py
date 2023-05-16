@@ -44,6 +44,29 @@ def get_sqrt(tick: int):
     return Decimal(1.0001 ** (tick / 2) * (2 ** 96))
 
 
+def get_amounts_0(sqrt_price_x96: int, tickA: int, tickB: int, liquidity0: int, liquidity1: int, decimal0: int, decimal1: int) -> \
+        (Decimal, Decimal):
+    sqrt = sqrt_price_x96
+    sqrtA = get_sqrt_ratio_at_tick(tickA)
+    sqrtB = get_sqrt_ratio_at_tick(tickB)
+
+    if sqrtA > sqrtB:
+        (sqrtA, sqrtB) = (sqrtB, sqrtA)
+
+    if sqrt < sqrtA:
+        amount0 = get_amount0(sqrtA, sqrtB, liquidity0, decimal0)
+        return amount0, Decimal(0)
+    elif sqrtB > sqrt > sqrtA:
+        amount0 = get_amount0(sqrt, sqrtB, liquidity0, decimal0)
+        amount1 = get_amount1(sqrtA, sqrt, liquidity1, decimal1)
+        return amount0, amount1
+    else:
+        amount1 = get_amount1(sqrtA, sqrtB, liquidity1, decimal1)
+        return Decimal(0), amount1
+
+
+'''get token amounts relation'''
+
 def get_amounts(sqrt_price_x96: int, tickA: int, tickB: int, liquidity: int, decimal0: int, decimal1: int) -> \
         (Decimal, Decimal):
     sqrt = sqrt_price_x96
@@ -53,9 +76,16 @@ def get_amounts(sqrt_price_x96: int, tickA: int, tickB: int, liquidity: int, dec
     if sqrtA > sqrtB:
         (sqrtA, sqrtB) = (sqrtB, sqrtA)
 
-    if sqrt <= sqrtA:
+    if sqrt < sqrtA:
         amount0 = get_amount0(sqrtA, sqrtB, liquidity, decimal0)
-        return amount0, Decimal(0)
+    if sqrt == sqrtA:
+        amount0 = get_amount0(sqrt, sqrtB, liquidity, decimal0)
+        amount1 = get_amount1(sqrtA, sqrtB, liquidity, decimal1)
+        return amount0, amount1
+    if sqrt == sqrtB:
+        amount0 = get_amount0(sqrtA, sqrtB, liquidity, decimal0)
+        amount1 = get_amount1(sqrtA, sqrt, liquidity, decimal1)
+        return amount0, amount1
     elif sqrtB > sqrt > sqrtA:
         amount0 = get_amount0(sqrt, sqrtB, liquidity, decimal0)
         amount1 = get_amount1(sqrtA, sqrt, liquidity, decimal1)
@@ -63,10 +93,6 @@ def get_amounts(sqrt_price_x96: int, tickA: int, tickB: int, liquidity: int, dec
     else:
         amount1 = get_amount1(sqrtA, sqrtB, liquidity, decimal1)
         return Decimal(0), amount1
-
-
-'''get token amounts relation'''
-
 
 # Use this formula to calculate amount of t0 based on amount of t1 (required before calculate liquidity)
 # relation = t1/t0
@@ -115,6 +141,29 @@ def to_wei(amount, decimals) -> int:
     return int(amount * 10 ** decimals)
 
 
+def get_liquidity_0(sqrt_price_x96: int, tickA: int, tickB: int,
+                  amount0: Decimal, amount1: Decimal,
+                  decimal0: int, decimal1: int) -> tuple[int, int]:
+    sqrt = sqrt_price_x96
+    sqrtA = get_sqrt_ratio_at_tick(tickA)
+    sqrtB = get_sqrt_ratio_at_tick(tickB)
+
+    if sqrtA > sqrtB:
+        (sqrtA, sqrtB) = (sqrtB, sqrtA)
+    amount0wei: int = to_wei(amount0, decimal0)
+    amount1wei: int = to_wei(amount1, decimal1)
+    if sqrt < sqrtA:
+        liquidity0 = get_liquidity_for_amount0(sqrtA, sqrtB, amount0wei)
+        return liquidity0, 0
+    elif sqrtB > sqrt > sqrtA:
+        liquidity0 = get_liquidity_for_amount0(sqrt, sqrtB, amount0wei)
+        liquidity1 = get_liquidity_for_amount1(sqrtA, sqrt, amount1wei)
+        return liquidity0, liquidity1
+    else:
+        liquidity1 = get_liquidity_for_amount1(sqrtA, sqrtB, amount1wei)
+        return 0, liquidity1
+
+
 def get_liquidity(sqrt_price_x96: int, tickA: int, tickB: int,
                   amount0: Decimal, amount1: Decimal,
                   decimal0: int, decimal1: int) -> int:
@@ -126,7 +175,7 @@ def get_liquidity(sqrt_price_x96: int, tickA: int, tickB: int,
         (sqrtA, sqrtB) = (sqrtB, sqrtA)
     amount0wei: int = to_wei(amount0, decimal0)
     amount1wei: int = to_wei(amount1, decimal1)
-    if sqrt <= sqrtA:
+    if sqrt < sqrtA:
         liquidity0 = get_liquidity_for_amount0(sqrtA, sqrtB, amount0wei)
         return liquidity0
     elif sqrtB > sqrt > sqrtA:
@@ -137,7 +186,7 @@ def get_liquidity(sqrt_price_x96: int, tickA: int, tickB: int,
     else:
         liquidity1 = get_liquidity_for_amount1(sqrtA, sqrtB, amount1wei)
         return liquidity1
-
+    
 
 def get_sqrt_ratio_at_tick(tick: int) -> int:
     tick = int(tick)
