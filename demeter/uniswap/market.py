@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 from typing import Dict
@@ -115,7 +116,7 @@ class UniLpMarket(Market):
 
     # endregion
 
-    def set_market_status(self, timestamp: datetime | None, data: pd.Series | UniV3PoolStatus):
+    def set_market_status(self, timestamp: datetime | None, data: pd.Series | UniV3PoolStatus, price: pd.Series):
         # update price tick
         if isinstance(data, UniV3PoolStatus):
             self._market_status = data
@@ -126,6 +127,7 @@ class UniLpMarket(Market):
                                                   data.inAmount0,
                                                   data.inAmount1,
                                                   data.price)
+        self._price_status = price
 
     def get_price_from_data(self) -> pd.DataFrame:
         if self.data is None:
@@ -392,6 +394,9 @@ class UniLpMarket(Market):
         :return: added position, base token used, quote token used
         :rtype: (PositionInfo, Decimal, Decimal)
         """
+        if lower_tick > upper_tick:
+            lower_tick, upper_tick = upper_tick, lower_tick
+
         if sqrt_price_x96 == -1 and tick != -1:
             sqrt_price_x96 = tick_to_sqrtPriceX96(tick)
 
@@ -648,7 +653,10 @@ class UniLpMarket(Market):
         df = pd.DataFrame()
         day = start_date
         while day <= end_date:
-            path = f"{self.data_path}/{chain}-{contract_addr}-{day.strftime('%Y-%m-%d')}.csv"
+            new_type_path = os.path.join(self.data_path, f"{chain.lower()}-{contract_addr}-{day.strftime('%Y-%m-%d')}.minute.csv")
+            path = new_type_path if os.path.exists(new_type_path) else os.path.join(self.data_path, f"{chain}-{contract_addr}-{day.strftime('%Y-%m-%d')}.csv")
+            if not os.path.exists(path):
+                raise IOError(f"resource file {new_type_path} not found, please download with demeter-fetch: https://github.com/zelos-alpha/demeter-fetch")
             day_df = pd.read_csv(path, converters={'inAmount0': to_decimal,
                                                    'inAmount1': to_decimal,
                                                    'netAmount0': to_decimal,
