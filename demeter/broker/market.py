@@ -78,7 +78,7 @@ class Market:
     def market_status(self):
         return self._market_status
 
-    def set_market_status(self, timestamp: datetime, data: pd.Series | MarketStatus, price: pd.Series):
+    def set_market_status(self, timestamp: datetime, data: pd.Series | MarketStatus, price: pd.Series | None):
         """
         set up market status, such as liquidity, price
         :param timestamp: current timestamp
