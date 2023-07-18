@@ -77,15 +77,17 @@ class V3CoreLib(object):
         return lower_tick, upper_tick
 
     @staticmethod
-    def update_fee(pool: UniV3Pool, pos: PositionInfo, position: Position, state: UniV3PoolStatus, prev_current_tick: int):
+    def update_fee(pool: UniV3Pool, pos: PositionInfo, position: Position, state: UniV3PoolStatus):
         """
         update fee
         :param pool: operation on which pool
         :param pos: position info
         :param position: position
         :param state: UniV3PoolStatus
+        :param last_tick:
         :return: None
         """
+
         # in most cases, tick will not cross to on_bar one, which means L will not change.
         def calc_amounts(in_range_lower_tick, in_range_upper_tick):
             pos_ticks_in_range = in_range_upper_tick - in_range_lower_tick + 1
